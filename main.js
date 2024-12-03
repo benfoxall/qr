@@ -23,7 +23,7 @@ async function Run() {
             navigator.mediaDevices.getUserMedia(mediaConstaints)
     )
 
-    video.style.opacity = 0.1
+    video.style.opacity = 0.2
     video.autoplay = true;
     video.srcObject = stream;
     document.body.appendChild(video);
