@@ -1,58 +1,59 @@
-const button = document.querySelector("button");
+const buttonScreen = document.querySelector("button#screen");
+const buttonCamera = document.querySelector("button#camera");
 
 const link = document.createElement("a");
 const video = document.createElement("video");
 const error = document.createElement("output");
 
 const mediaConstaints = { audio: false, video: true };
-const recorderConstraints = { mimeType: "video/webm; codecs=vp9" };
-const blobOpts = { type: "video/webm" };
 
 Loop();
 
 async function Run() {
-    await on(button, "click");
+    const screen = on(buttonScreen, "click");
+    const camera = on(buttonCamera, "click");
+
+    const pressed = await Promise.race([screen, camera])
 
     error.remove();
 
-    const stream = await navigator.mediaDevices.getDisplayMedia(mediaConstaints);
+    const stream = await (
+        pressed.target.id === 'screen' ?
+            navigator.mediaDevices.getDisplayMedia(mediaConstaints) :
+            navigator.mediaDevices.getUserMedia(mediaConstaints)
+    )
+
+
 
     video.autoplay = true;
     video.srcObject = stream;
     document.body.appendChild(video);
 
-    const recorder = new MediaRecorder(stream, recorderConstraints);
+    await new Promise((resolve) => {
+        video.onplaying = resolve;
+    });
 
-    // Also record the video
-    const chunks = [];
-    recorder.ondataavailable = (event) => chunks.push(event.data);
+    const detector = new BarcodeDetector({
+        formats: ["qr_code"],
+    });
 
-    const finish = new Promise((resolve) => (recorder.onstop = resolve));
+    while (true) {
+        const codes = await detector.detect(video);
 
-    recorder.start();
+        const [first] = codes;
+        if (first) {
+            console.log(first.rawValue, first);
 
-    // todo - handle external stop
-    await on(video, "click");
+            document.location = first.rawValue
 
-    video.pause();
-    recorder.stop();
-    stream.getTracks().forEach((track) => track.stop());
+            break;
+        }
 
-    await finish;
-
-    const blob = new Blob(chunks, blobOpts);
-
-    if (link.href) {
-        URL.revokeObjectURL(link.href);
+        await new Promise(requestAnimationFrame);
     }
 
-    link.href = URL.createObjectURL(blob);
-    link.download = "Recording.webm";
-
-    document.body.append(link);
-    link.append(video);
-
     video.pause();
+    stream.getTracks().forEach((track) => track.stop());
 }
 
 function Loop() {
