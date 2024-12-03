@@ -22,6 +22,7 @@ button {
 
   background-color: var(--💕);
   color: var(--🤜);
+  margin: 0.1em;
 }
 
 button:hover {
